@@ -1,53 +1,38 @@
-//var path = require('path');
-//var rel = path.relative(process.cwd(), __dirname);
-//var alljs = path.join(rel, '**', '*.js');
-//var njstrace = require('njstrace').inject({files: [alljs]});
-
-
 require('dotenv').config();
 
 var fs = require('fs');
 var path = require('path');
 var os = require('os');
 var cluster = require('cluster');
-
 var mysql = require('mysql');
 var async = require('async');
 var extend = require('extend');
 var chalk = require('chalk');
 var redis = require('redis');
 
-//var PoolLogger = require('./libs/logUtil.js');
 var CliListener = require('./libs/cliListener.js');
 var PoolWorker = require('./libs/poolWorker.js');
 
-var chalk = require('chalk');
-
-//var yiimpRefresh = require('./libs/yiimplib');
-//var { yiimpRefresh, test } = require('./libs/yiimplib');
 var yiimplib = require('./libs/yiimplib.js');
 var algos = require('stratum-pool/lib/algoProperties.js');
 var mpos = require('./libs/mposCompatibility.js');
 var poolWorkers = {};
 var pid = process.pid;
 
-//test();
-
 JSON.minify = JSON.minify || require('node-json-minify');
 
 if (!fs.existsSync('config.json')) {
     console.log(
-        'config.json file does not exist. Read the installation/setup instructions.',
+        'config.json file does not exist. Read the installation/setup instructions.'
     );
     return;
 }
 
-
 var portalConfig = JSON.parse(
-    JSON.minify(fs.readFileSync('config.json', { encoding: 'utf8' })),
+    JSON.minify(fs.readFileSync('config.json', { encoding: 'utf8' }))
 );
-var poolConfigs;
 
+var poolConfigs;
 const pino = require('pino')
 //const dest = pino.extreme() // logs to stdout with no args
 const logger = pino({
@@ -58,21 +43,8 @@ const logger = pino({
        levelFirst: true
     },
     prettifier: require('pino-pretty'),
-	processors: ['level', 'time', 'message']
-})
-
-//var logger = new PoolLogger({
-//    logLevel: portalConfig.logLevel,
-//    logColors: portalConfig.logColors,
-//});
-
-/*
-try {
-    require('newrelic');
-    if (cluster.isMaster)
-        logger.debug('NewRelic', 'Monitor', 'New Relic initiated');
-} catch (e) {}
-*/
+    processors: ['level', 'time', 'message']
+});
 
 //Try to give process ability to handle 100k concurrent connections
 try {
@@ -84,7 +56,7 @@ try {
             logger.warn(
                 'POSIX',
                 'Connection Limit',
-                '(Safe to ignore) Must be ran as root to increase resource limits',
+                '(Safe to ignore) Must be ran as root to increase resource limits'
             );
     } finally {
         // Find out which user used sudo through the environment variable
@@ -96,7 +68,7 @@ try {
                 'POSIX',
                 'Connection Limit',
                 'Raised to 100K concurrent connections, now running as non-root user: ' +
-                    process.getuid(),
+                    process.getuid()
             );
         }
     }
@@ -105,13 +77,9 @@ try {
         logger.debug(
             'POSIX',
             'Connection Limit',
-            '(Safe to ignore) POSIX module not installed and resource (connection) limit was not raised',
+            '(Safe to ignore) POSIX module not installed and resource (connection) limit was not raised'
         );
 }
-
-
-
-// logger.warn('POSIX', chalk.hex('#DEADED').underline('Hello, world!'))
 
 // ======================================================
 // ---THIS IS WHERE WE BROADCAST FOR MASTER -> WORKER-------
@@ -128,19 +96,7 @@ function yiimpTimer() {
             for (var key in poolWorkers){
                 poolWorkers[key].send({type: 'getMinerCount'});
             }
-/*
-            console.log(
-                'We currently have this amount of poolWorkers ',
-                Object.keys(poolWorkers).length,
-            );
-*/
             poolWorkers[0].send({ type: 'yiimpTimer' });
-            /*
-            Object.keys(poolWorkers).forEach(function(key) {
-                worker = poolWorkers[key];
-                worker.send({ type: 'yiimpTimer' });
-            });
-*/
         }
     }, 15000);
 }
@@ -156,15 +112,6 @@ if (cluster.isWorker) {
             // If we are currently in a forker pool worker, run this
             new PoolWorker(logger);
             break;
-       // case 'paymentProcessor':
-       //     new PaymentProcessor(logger);
-        //    break;
-        //case 'website':
-         //   new Website(logger);
-          //  break;
-       // case 'profitSwitch':
-       //     new ProfitSwitch(logger);
-       //     break;
     }
 
     return;
@@ -186,8 +133,8 @@ var buildPoolConfigs = function() {
             return;
         var poolOptions = JSON.parse(
             JSON.minify(
-                fs.readFileSync(configDir + file, { encoding: 'utf8' }),
-            ),
+                fs.readFileSync(configDir + file, { encoding: 'utf8' })
+            )
         );
         if (!poolOptions.enabled) return;
         poolOptions.fileName = file;
@@ -208,7 +155,7 @@ var buildPoolConfigs = function() {
                         'Has same configured port of ' +
                             portsF[g] +
                             ' as ' +
-                            poolConfigFiles[i].fileName,
+                            poolConfigFiles[i].fileName
                     );
                     process.exit(1);
                     return;
@@ -223,7 +170,7 @@ var buildPoolConfigs = function() {
                         poolConfigFiles[f].coin +
                         ' as ' +
                         poolConfigFiles[i].fileName +
-                        ' pool',
+                        ' pool'
                 );
                 process.exit(1);
                 return;
@@ -239,13 +186,13 @@ var buildPoolConfigs = function() {
             logger.error(
                 'Master',
                 poolOptions.coinFileName,
-                'could not find file: ' + coinFilePath,
+                'could not find file: ' + coinFilePath
             );
             return;
         }
 
         var coinProfile = JSON.parse(
-            JSON.minify(fs.readFileSync(coinFilePath, { encoding: 'utf8' })),
+            JSON.minify(fs.readFileSync(coinFilePath, { encoding: 'utf8' }))
         );
         poolOptions.coin = coinProfile;
         poolOptions.coin.name = poolOptions.coin.name.toLowerCase();
@@ -261,7 +208,7 @@ var buildPoolConfigs = function() {
                     ' as coins/' +
                     configs[poolOptions.coin.name].coinFileName +
                     ' used by pool config ' +
-                    configs[poolOptions.coin.name].fileName,
+                    configs[poolOptions.coin.name].fileName
             );
 
             process.exit(1);
@@ -287,7 +234,7 @@ var buildPoolConfigs = function() {
                 coinProfile.name,
                 'Cannot run a pool for unsupported algorithm "' +
                     coinProfile.algorithm +
-                    '"',
+                    '"'
             );
             delete configs[poolOptions.coin.name];
         }
@@ -318,25 +265,9 @@ var spawnPoolWorkers = function() {
             logger.error(
                 'Master',
                 coin,
-                'No daemons configured so a pool cannot be started for this coin.',
+                'No daemons configured so a pool cannot be started for this coin.'
             );
             delete poolConfigs[coin];
-        } else if (!connection) {
-/*
-            redisConfig = pcfg.redis;
-            connection = redis.createClient(redisConfig.port, redisConfig.host);
-            connection.on('ready', function() {
-                logger.debug(
-                    'PPLNT',
-                    coin,
-                    'TimeShare processing setup with redis (' +
-                        redisConfig.host +
-                        ':' +
-                        redisConfig.port +
-                        ')',
-                );
-            });
-*/
         }
     });
 
@@ -344,7 +275,7 @@ var spawnPoolWorkers = function() {
         logger.warn(
             'Master',
             'PoolSpawner',
-            'No pool configs exists or are enabled in pool_configs folder. No pools spawned.',
+            'No pool configs exists or are enabled in pool_configs folder. No pools spawned.'
         );
         return;
     }
@@ -387,7 +318,7 @@ var spawnPoolWorkers = function() {
                 logger.error(
                     'Master',
                     'PoolSpawner',
-                    'Fork ' + forkId + ' died, spawning replacement worker...',
+                    'Fork ' + forkId + ' died, spawning replacement worker...'
                 );
                 setTimeout(function() {
                     createPoolWorker(forkId);
@@ -430,7 +361,7 @@ var spawnPoolWorkers = function() {
                     Object.keys(poolConfigs).length +
                     ' pool(s) on ' +
                     numForks +
-                    ' thread(s)',
+                    ' thread(s)'
             );
         }
     }, 250);
@@ -481,11 +412,6 @@ module.exports = function(logger, poolConfig) {
     const mposConfig = poolConfig.mposMode;
     const coin = poolConfig.coin.name;
 
-//    logger.debug(
-//        'DEBUG',
-//        'DEBUG',
-//        '********* mposConfig=' + JSON.stringify(mposConfig),
-//    );
     const connection = mysql.createPool({
         host: mposConfig.host,
         port: mposConfig.port,
